@@ -62,7 +62,7 @@ class DatasetLoader(object):
                 # TODO(tks10): Deal with an alpha channel.
                 # If original pixel's value aren't 255, contrary to expectations, the pixels may be not white.
             image = np.asarray(image)
-
+            image = image / 255
             yield image
 
     def load_train_test(self, train_rate=0.8, shuffle=True, transpose_by_color=False):

@@ -11,6 +11,7 @@ if __name__ == "__main__":
     test.print_information()
     for batch in train(batch_size=30):
         print(batch.images.shape, batch.labels.shape)
+        print(batch.images[0])
 
     # [load_raw_dataset]
     # データ全体がDatasetオブジェクトで返ってきます
