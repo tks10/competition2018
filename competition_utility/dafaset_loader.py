@@ -4,21 +4,22 @@ import glob
 
 
 class DatasetLoader(object):
-    def __init__(self, directory_paths, labels, init_size=(64, 64)):
-        self._data = DatasetLoader.import_all_images(directory_paths, labels, init_size)
+    def __init__(self, directory_paths, labels, init_size=(64, 64), one_hot=True):
+        self._data = DatasetLoader.import_all_images(directory_paths, labels, init_size, one_hot)
 
     @staticmethod
-    def import_all_images(directory_paths, labels, init_size=(64, 64)):
+    def import_all_images(directory_paths, labels, init_size=(64, 64), one_hot=True):
         assert len(directory_paths) == len(labels), "directory_paths and labels must be same length."
-        _data = DatasetLoader.import_images(directory_paths[0], labels[0], init_size)
+        label_count = np.unique(labels).shape[0] if one_hot else -1
+        _data = DatasetLoader.import_images(directory_paths[0], labels[0], label_count, init_size, one_hot)
         # Load additional datas if directory_paths have more than 2 items.
         if len(directory_paths) > 1:
             for directory_path, label in zip(directory_paths[1:], labels[1:]):
-                _data += DatasetLoader.import_images(directory_path, label, init_size)
+                _data += DatasetLoader.import_images(directory_path, label, label_count, init_size, one_hot)
         return _data
 
     @staticmethod
-    def import_images(directory_path, label, init_size=None):
+    def import_images(directory_path, label, label_count, init_size=None, one_hot=True):
         file_paths = glob.glob(directory_path + "/*")
         _images = []
         height, width = -1, -1
@@ -28,7 +29,12 @@ class DatasetLoader(object):
                 "cannot import images which have a different resolution."
             height, width = image.shape[0], image.shape[1]
             _images.append(image)
-        _labels = [label for _ in range(len(_images))]
+        if one_hot:
+            _labels = np.zeros((len(_images), label_count))
+            for i in range(_labels.shape[0]):
+                _labels[i][label] = 1
+        else:
+            _labels = np.full(len(_images), label)
 
         return DataSet(_images, _labels)
 
@@ -109,7 +115,7 @@ class DataSet(object):
     OTHERS = 1
 
     def __init__(self, images, labels):
-        self._images = np.asarray(images)
+        self._images = np.asarray(images, dtype=np.float32)
         self._labels = np.asarray(labels)
 
     @property

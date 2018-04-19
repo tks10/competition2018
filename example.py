@@ -1,7 +1,7 @@
 from competition_utility import dafaset_loader as dl
 
 if __name__ == "__main__":
-    loader = dl.DatasetLoader(["Images", "Images"], [dl.DataSet.TARGET, dl.DataSet.OTHERS])
+    loader = dl.DatasetLoader(["Images", "OTHERS"], [dl.DataSet.TARGET, dl.DataSet.OTHERS])
 
     # [load_train_test]
     # trainとtestがDatasetオブジェクトで返ってきます
