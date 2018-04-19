@@ -4,44 +4,66 @@ import glob
 
 
 class DatasetLoader(object):
-    def __init__(self, directory_paths, labels):
-        self._data = DatasetLoader.import_all_images(directory_paths, labels)
+    def __init__(self, directory_paths, labels, init_size=(64, 64), one_hot=True):
+        self._data = DatasetLoader.import_all_images(directory_paths, labels, init_size, one_hot)
 
     @staticmethod
-    def import_all_images(directory_paths, labels):
+    def import_all_images(directory_paths, labels, init_size=(64, 64), one_hot=True):
         assert len(directory_paths) == len(labels), "directory_paths and labels must be same length."
-        _data = DatasetLoader.import_images(directory_paths[0], labels[0])
+        label_count = np.unique(labels).shape[0] if one_hot else -1
+        _data = DatasetLoader.import_images(directory_paths[0], labels[0], label_count, init_size, one_hot)
         # Load additional datas if directory_paths have more than 2 items.
         if len(directory_paths) > 1:
             for directory_path, label in zip(directory_paths[1:], labels[1:]):
-                _data += DatasetLoader.import_images(directory_path, label)
+                _data += DatasetLoader.import_images(directory_path, label, label_count, init_size, one_hot)
         return _data
 
     @staticmethod
-    def import_images(directory_path, label):
+    def import_images(directory_path, label, label_count, init_size=None, one_hot=True):
         file_paths = glob.glob(directory_path + "/*")
         _images = []
         height, width = -1, -1
         # Load images from directory_path using generator.
-        for image in DatasetLoader.image_generator(file_paths):
+        for image in DatasetLoader.image_generator(file_paths, init_size):
             assert (height == image.shape[0] and width == image.shape[1]) or height == -1,\
                 "cannot import images which have a different resolution."
             height, width = image.shape[0], image.shape[1]
             _images.append(image)
-        _labels = [label for _ in range(len(_images))]
+        if one_hot:
+            _labels = np.zeros((len(_images), label_count))
+            for i in range(_labels.shape[0]):
+                _labels[i][label] = 1
+        else:
+            _labels = np.full(len(_images), label)
+
         return DataSet(_images, _labels)
 
     @staticmethod
-    def image_generator(file_paths):
+    def image_generator(file_paths, init_size=None):
+        """
+
+        `A generator which yields images deleted an alpha channel and resized.
+         アルファチャネル削除、リサイズ(任意)処理を行った画像を返します
+
+        Args:
+            file_paths (list[string]): File paths you want load.
+            init_size (tuple(int, int)): If having a value, images are resized by init_size.
+
+        Yields:
+            image (ndarray[width][height][channel]): processed image.
+
+        """
         for file_path in file_paths:
-            yield DatasetLoader.get_image(file_path)
-
-    @staticmethod
-    def get_image(file_path):
-        image = Image.open(file_path)
-        image_nparray = np.asarray(image)
-
-        return image_nparray
+            image = Image.open(file_path)
+            if init_size is not None and init_size != image.size:
+                image = image.resize(init_size)
+            if image.mode == "RGBA":
+                image = image.convert("RGB")
+                # TODO(tks10): Deal with an alpha channel.
+                # If original pixel's value aren't 255, contrary to expectations, the pixels may be not white.
+            image = np.asarray(image)
+            image = image / 255
+            yield image
 
     def load_train_test(self, train_rate=0.8, shuffle=True, transpose_by_color=False):
         """
@@ -70,37 +92,6 @@ class DatasetLoader(object):
 
         return _train_set, _test_set
 
-    def load_train_test_batch(self, train_rate=0.8, batch_size=20, shuffle=True, transpose_by_color=False):
-        """
-
-        `Load batches splited into training set and test set.
-         訓練とテストに分けられたバッチデータをロードします．
-
-        Args:
-            train_rate (float): Training rate.
-            batch_size (int): Batch size.
-            shuffle (bool): If true, shuffle dataset.
-            transpose_by_color (bool): If True, transpose images for chainer. [channel][width][height]
-
-        Returns:
-            Training batches (ndarray), Test batches (ndarray)
-
-        """
-        if train_rate < 0.0 or train_rate > 1.0:
-            raise ValueError("train_rate must be from 0.0 to 1.0.")
-        if batch_size < 1:
-            raise ValueError("batch_size must be more than 1.")
-        train_set, test_set = self.load_train_test(train_rate, shuffle, transpose_by_color)
-        train_res, test_res = [], []
-        for start in range(0, train_set.length, batch_size):
-            permed = train_set.perm(start, start+batch_size)
-            train_res.append({"data": permed.images, "label": permed.labels})
-        for start in range(0, test_set.length, batch_size):
-            permed = train_set.perm(start, start+batch_size)
-            test_res.append({"data": permed.images, "label": permed.labels})
-
-        return np.asarray(train_res), np.asarray(test_res)
-
     def load_raw_dataset(self, shuffle=True, transpose_by_color=False):
         """
 
@@ -124,7 +115,7 @@ class DataSet(object):
     OTHERS = 1
 
     def __init__(self, images, labels):
-        self._images = np.asarray(images)
+        self._images = np.asarray(images, dtype=np.float32)
         self._labels = np.asarray(labels)
 
     @property
@@ -162,6 +153,29 @@ class DataSet(object):
         if end > len(self._images):
             end = len(self._images)
         return DataSet(self._images[start:end], self._labels[start:end])
+
+    def __call__(self, batch_size=20, shuffle=True):
+        """
+
+        `A generator which yields a batch. The batch is shuffled as default.
+         バッチを返すジェネレータです。 デフォルトでバッチはシャッフルされます。
+
+        Args:
+            batch_size (int): batch size.
+            shuffle (bool): If True, randomize batch datas.
+
+        Yields:
+            batch (ndarray[][][]): A batch data.
+
+        """
+
+        if batch_size < 1:
+            raise ValueError("batch_size must be more than 1.")
+        _data = self.shuffle() if shuffle else self
+
+        for start in range(0, self.length, batch_size):
+            permed = _data.perm(start, start+batch_size)
+            yield permed
 
 
 if __name__ == "__main__":
