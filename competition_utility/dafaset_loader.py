@@ -86,37 +86,6 @@ class DatasetLoader(object):
 
         return _train_set, _test_set
 
-    def load_train_test_batch(self, train_rate=0.8, batch_size=20, shuffle=True, transpose_by_color=False):
-        """
-
-        `Load batches splited into training set and test set.
-         訓練とテストに分けられたバッチデータをロードします．
-
-        Args:
-            train_rate (float): Training rate.
-            batch_size (int): Batch size.
-            shuffle (bool): If true, shuffle dataset.
-            transpose_by_color (bool): If True, transpose images for chainer. [channel][width][height]
-
-        Returns:
-            Training batches (ndarray), Test batches (ndarray)
-
-        """
-        if train_rate < 0.0 or train_rate > 1.0:
-            raise ValueError("train_rate must be from 0.0 to 1.0.")
-        if batch_size < 1:
-            raise ValueError("batch_size must be more than 1.")
-        train_set, test_set = self.load_train_test(train_rate, shuffle, transpose_by_color)
-        train_res, test_res = [], []
-        for start in range(0, train_set.length, batch_size):
-            permed = train_set.perm(start, start+batch_size)
-            train_res.append({"data": permed.images, "label": permed.labels})
-        for start in range(0, test_set.length, batch_size):
-            permed = train_set.perm(start, start+batch_size)
-            test_res.append({"data": permed.images, "label": permed.labels})
-
-        return np.asarray(train_res), np.asarray(test_res)
-
     def load_raw_dataset(self, shuffle=True, transpose_by_color=False):
         """
 
