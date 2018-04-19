@@ -4,44 +4,60 @@ import glob
 
 
 class DatasetLoader(object):
-    def __init__(self, directory_paths, labels):
-        self._data = DatasetLoader.import_all_images(directory_paths, labels)
+    def __init__(self, directory_paths, labels, init_size=(64, 64)):
+        self._data = DatasetLoader.import_all_images(directory_paths, labels, init_size)
 
     @staticmethod
-    def import_all_images(directory_paths, labels):
+    def import_all_images(directory_paths, labels, init_size=(64, 64)):
         assert len(directory_paths) == len(labels), "directory_paths and labels must be same length."
-        _data = DatasetLoader.import_images(directory_paths[0], labels[0])
+        _data = DatasetLoader.import_images(directory_paths[0], labels[0], init_size)
         # Load additional datas if directory_paths have more than 2 items.
         if len(directory_paths) > 1:
             for directory_path, label in zip(directory_paths[1:], labels[1:]):
-                _data += DatasetLoader.import_images(directory_path, label)
+                _data += DatasetLoader.import_images(directory_path, label, init_size)
         return _data
 
     @staticmethod
-    def import_images(directory_path, label):
+    def import_images(directory_path, label, init_size=None):
         file_paths = glob.glob(directory_path + "/*")
         _images = []
         height, width = -1, -1
         # Load images from directory_path using generator.
-        for image in DatasetLoader.image_generator(file_paths):
+        for image in DatasetLoader.image_generator(file_paths, init_size):
             assert (height == image.shape[0] and width == image.shape[1]) or height == -1,\
                 "cannot import images which have a different resolution."
             height, width = image.shape[0], image.shape[1]
             _images.append(image)
         _labels = [label for _ in range(len(_images))]
+
         return DataSet(_images, _labels)
 
     @staticmethod
-    def image_generator(file_paths):
+    def image_generator(file_paths, init_size=None):
+        """
+
+        `A generator which yields images deleted an alpha channel and resized.
+         アルファチャネル削除、リサイズ(任意)処理を行った画像を返します
+
+        Args:
+            file_paths (list[string]): File paths you want load.
+            init_size (tuple(int, int)): If having a value, images are resized by init_size.
+
+        Yields:
+            image (ndarray[width][height][channel]): processed image.
+
+        """
         for file_path in file_paths:
-            yield DatasetLoader.get_image(file_path)
+            image = Image.open(file_path)
+            if init_size is not None and init_size != image.size:
+                image = image.resize(init_size)
+            if image.mode == "RGBA":
+                image = image.convert("RGB")
+                # TODO(tks10): Deal with an alpha channel.
+                # If original pixel's value aren't 255, contrary to expectations, the pixels may be not white.
+            image = np.asarray(image)
 
-    @staticmethod
-    def get_image(file_path):
-        image = Image.open(file_path)
-        image_nparray = np.asarray(image)
-
-        return image_nparray
+            yield image
 
     def load_train_test(self, train_rate=0.8, shuffle=True, transpose_by_color=False):
         """
