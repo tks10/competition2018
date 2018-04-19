@@ -179,6 +179,29 @@ class DataSet(object):
             end = len(self._images)
         return DataSet(self._images[start:end], self._labels[start:end])
 
+    def __call__(self, batch_size=20, shuffle=True):
+        """
+
+        `A generator which yields a batch. The batch is shuffled as default.
+         バッチを返すジェネレータです。 デフォルトでバッチはシャッフルされます。
+
+        Args:
+            batch_size (int): batch size.
+            shuffle (bool): If True, randomize batch datas.
+
+        Yields:
+            batch (ndarray[][][]): A batch data.
+
+        """
+
+        if batch_size < 1:
+            raise ValueError("batch_size must be more than 1.")
+        _data = self.shuffle() if shuffle else self
+
+        for start in range(0, self.length, batch_size):
+            permed = _data.perm(start, start+batch_size)
+            yield permed
+
 
 if __name__ == "__main__":
     dataset_loader = DatasetLoader(["Images", "Images"], [DataSet.TARGET, DataSet.OTHERS])

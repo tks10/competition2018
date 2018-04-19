@@ -5,19 +5,17 @@ if __name__ == "__main__":
 
     # [load_train_test]
     # trainとtestがDatasetオブジェクトで返ってきます
-    train, test = loader.load_train_test()
+    # Datasetオブジェクトの__call__はイテレータブルになっています
+    train, test = loader.load_train_test(train_rate=0.75)
     train.print_information()
     test.print_information()
+    for batch in train(batch_size=30):
+        print(batch.images.shape, batch.labels.shape)
 
     # [load_raw_dataset]
     # データ全体がDatasetオブジェクトで返ってきます
     dataset = loader.load_raw_dataset()
     dataset.print_information()
 
-    # [load_train_test_batch]
-    # trainとtestが[batch_count][dict][width][height][channel]で返ってきます
-    # Keyは"data"と"label"
-    train, test = loader.load_train_test_batch()
-    for batch in train:
-        print(batch["data"].shape, batch["label"].shape)
+
 
