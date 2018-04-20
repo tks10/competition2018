@@ -8,6 +8,7 @@ import sys
 from competition_utility import dafaset_loader as dl
 
 import tensorflow as tf
+import numpy as np
 
 FLAGS = None
 
@@ -15,24 +16,31 @@ FLAGS = None
 def create_model():
     # Create the model
     x = tf.placeholder(tf.float32, [None, 64*64*3])
-    W = tf.Variable(tf.zeros([64*64*3, 2000]))
-    b = tf.Variable(tf.zeros([2000]))
-    h = tf.nn.sigmoid(tf.matmul(x, W) + b)
+    initial_w = tf.truncated_normal([64*64*3, 2000], stddev=0.1, dtype=tf.float32)
+    w = tf.Variable(initial_w)
+    initial_b = tf.truncated_normal([2000], stddev=0.1, dtype=tf.float32)
+    b = tf.Variable(initial_b)
+    h = tf.nn.sigmoid(tf.matmul(x, w) + b)
 
-    W2 = tf.Variable(tf.zeros([2000, 2]))
-    b2 = tf.Variable(tf.zeros([2]))
-    y = tf.nn.softmax(tf.matmul(h, W2) + b2)
+    initial_w2 = tf.truncated_normal([2000, 2], stddev=0.1, dtype=tf.float32)
+    w2 = tf.Variable(initial_w2)
+    initial_b2 = tf.truncated_normal([2], stddev=0.1, dtype=tf.float32)
+    b2 = tf.Variable(initial_b2)
+    y = tf.nn.softmax(tf.matmul(h, w2) + b2)
 
     return x, y
 
 
 def main(_):
-    dirs = ["kobayashi_face", "OTHERS"]
+    dirs = ["target", "others2"]
     labels = [dl.DataSet.TARGET, dl.DataSet.OTHERS]
     loader = dl.DatasetLoader(dirs, labels)
     train, test = loader.load_train_test()
     train.print_information()
     test.print_information()
+
+
+    gpu = False
 
     x, y = create_model()
 
@@ -46,11 +54,11 @@ def main(_):
     gpu_config = tf.ConfigProto(
       gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.9),
       device_count={'GPU': 0})
-    sess = tf.InteractiveSession(config=gpu_config)
+    sess = tf.InteractiveSession(config=gpu_config) if gpu else tf.InteractiveSession()
     tf.global_variables_initializer().run()
     # Train
-    for _ in range(1000):
-        for image in train(batch_size=50):
+    for _ in range(100):
+        for image in train(batch_size=32):
             batch_xs, batch_ys = image.images, image.labels
             batch_xs = batch_xs.reshape((len(batch_xs), 64*64*3))
 
