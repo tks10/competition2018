@@ -54,16 +54,17 @@ class DatasetLoader(object):
 
         """
         for file_path in file_paths:
-            image = Image.open(file_path)
-            if init_size is not None and init_size != image.size:
-                image = image.resize(init_size)
-            if image.mode == "RGBA":
-                image = image.convert("RGB")
-                # TODO(tks10): Deal with an alpha channel.
-                # If original pixel's value aren't 255, contrary to expectations, the pixels may be not white.
-            image = np.asarray(image)
-            image = image / 255
-            yield image
+            if file_path.endswith(".png") or file_path.endswith(".jpg"):
+                image = Image.open(file_path)
+                if init_size is not None and init_size != image.size:
+                    image = image.resize(init_size)
+                if image.mode == "RGBA":
+                    image = image.convert("RGB")
+                    # TODO(tks10): Deal with an alpha channel.
+                    # If original pixel's value aren't 255, contrary to expectations, the pixels may be not white.
+                image = np.asarray(image, dtype=np.float32)
+                image = image / 255
+                yield image
 
     def load_train_test(self, train_rate=0.8, shuffle=True, transpose_by_color=False):
         """
