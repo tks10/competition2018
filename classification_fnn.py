@@ -39,7 +39,6 @@ def main(_):
     train.print_information()
     test.print_information()
 
-
     gpu = False
 
     x, y = create_model()
