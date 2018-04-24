@@ -11,11 +11,9 @@ from __future__ import print_function
 
 import argparse
 import sys
+import tensorflow as tf
 
 from competition_utility import dafaset_loader as dl
-
-import tensorflow as tf
-import numpy as np
 
 
 def create_model():
@@ -33,6 +31,20 @@ def create_model():
     initial_b2 = tf.truncated_normal([2], stddev=0.1, dtype=tf.float32)
     b2 = tf.Variable(initial_b2)
     y = tf.nn.softmax(tf.matmul(h, w2) + b2)
+
+    return x, y
+
+
+def create_model_using_layers():
+    # Create the free connected layers
+    # 全結合のモデルを生成します
+    x = tf.placeholder(tf.float32, [None, 64*64*3])
+    h = tf.layers.dense(inputs=x, units=2000, activation=tf.nn.sigmoid,
+                        kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                        bias_initializer=tf.truncated_normal_initializer(stddev=0.1))
+    y = tf.layers.dense(inputs=h, units=2, activation=tf.sigmoid,
+                        kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                        bias_initializer=tf.truncated_normal_initializer(stddev=0.1))
 
     return x, y
 

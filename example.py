@@ -17,6 +17,3 @@ if __name__ == "__main__":
     # データ全体がDatasetオブジェクトで返ってきます
     dataset = loader.load_raw_dataset()
     dataset.print_information()
-
-
-
