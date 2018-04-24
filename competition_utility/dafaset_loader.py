@@ -124,6 +124,10 @@ class DataSet(object):
         return self._images
 
     @property
+    def images_reshaped(self):
+        return self._images.reshape((-1, self._images.shape[1] * self._images.shape[2] * self._images.shape[3]))
+
+    @property
     def labels(self):
         return self._labels
 

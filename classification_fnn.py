@@ -4,16 +4,16 @@
 
     Author: Kazuki Takaishi
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import argparse
 import sys
+import os
 import tensorflow as tf
 
 from competition_utility import dafaset_loader as dl
+
+FLAGS = None
+DIR_TARGET = "kobayashi"
+DIR_OTHERS = "others"
 
 
 def create_model():
@@ -49,8 +49,40 @@ def create_model_using_layers():
     return x, y
 
 
+def create_cnn_model():
+    # Convolutional Layer #1
+    x = tf.placeholder(tf.float32, [None, 64, 64, 3])
+    conv1 = tf.layers.conv2d(
+        inputs=x,
+        filters=32,
+        kernel_size=[5, 5],
+        padding="same",
+        activation=tf.nn.relu)
+
+    # Pooling Layer #1
+    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
+
+    # Convolutional Layer #2 and Pooling Layer #2
+    conv2 = tf.layers.conv2d(
+        inputs=pool1,
+        filters=64,
+        kernel_size=[5, 5],
+        padding="same",
+        activation=tf.nn.relu)
+    pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
+
+    # Dense Layer
+    pool2_flat = tf.reshape(pool2, [-1, 16 * 16 * 64])
+    dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
+
+    # Logits Layer
+    y = tf.layers.dense(inputs=dense, units=2)
+
+    return x, y
+
+
 def load_dataset():
-    dirs = ["images/kobayashi", "images/others"]
+    dirs = [os.path.join(FLAGS.data_dir, "kobayashi"), os.path.join(FLAGS.data_dir, "others")]
     labels = [dl.DataSet.TARGET, dl.DataSet.OTHERS]
     loader = dl.DatasetLoader(dirs, labels)
     return loader.load_train_test()
@@ -64,12 +96,15 @@ def main(_):
 
     # Whether or not using a GPU
     # GPUを使用するか
-    gpu = False
+    gpu = FLAGS.gpu
+    use_cnn = FLAGS.cnn
+
+    print(sys.path)
 
     # Create a model
     # モデルの生成
     # 入力用のプレースホルダと最終層が返却される
-    x, y = create_model()
+    x, y = create_cnn_model() if use_cnn else create_model_using_layers()
 
     # Define output place holder
     # 出力のプレースホルダを定義します．ここに教師データが入ります．
@@ -92,41 +127,41 @@ def main(_):
 
     # Train model
     # モデルの訓練
-    epochs = 100
+    epochs = 200
     batch_size = 32
-    input_size = 64 * 64 * 3
-    for epoch in range(epochs):
-        for image in train(batch_size=batch_size):
-            batch_images, batch_labels = image.images, image.labels
-            batch_images = batch_images.reshape((batch_images.shape[0], input_size))
+    train_images = train.images if use_cnn else train.images_reshaped
+    test_images = test.images if use_cnn else test.images_reshaped
 
+    for epoch in range(epochs):
+        for batch in train(batch_size=batch_size):
+            # バッチデータの展開
+            batch_images = batch.images if use_cnn else batch.images_reshaped
+            batch_labels = batch.labels
+            # Back Prop
             sess.run(train_step, feed_dict={x: batch_images, y_: batch_labels})
+        # Evaluation
+        # 評価
         if epoch % 10 == 0:
-            loss_train = sess.run(cross_entropy, feed_dict={x: train.images.reshape((train.images.shape[0], input_size)),
-                                                           y_: train.labels})
-            loss_test = sess.run(cross_entropy, feed_dict={x: test.images.reshape((test.images.shape[0], input_size)),
-                                                           y_: test.labels})
-            accuracy_train = sess.run(accuracy, feed_dict={x: train.images.reshape((train.images.shape[0], input_size)),
-                                                           y_: train.labels})
-            accuracy_test = sess.run(accuracy, feed_dict={x: test.images.reshape((len(test.images), input_size)),
-                                                           y_: test.labels})
+            loss_train = sess.run(cross_entropy, feed_dict={x: train_images, y_: train.labels})
+            loss_test = sess.run(cross_entropy, feed_dict={x: test_images, y_: test.labels})
+            accuracy_train = sess.run(accuracy, feed_dict={x: train_images, y_: train.labels})
+            accuracy_test = sess.run(accuracy, feed_dict={x: test_images, y_: test.labels})
             print("Epoch:", epoch)
             print("[Train] Loss:", loss_train, " Accuracy:", accuracy_train)
             print("[Test]  Loss:", loss_test, "Accuracy:", accuracy_test)
 
     # Test trained model
     # 訓練済みモデルの評価
-    loss_test = sess.run(cross_entropy, feed_dict={x: test.images.reshape((test.images.shape[0], input_size)),
-                                                   y_: test.labels})
-    accuracy_test = sess.run(accuracy, feed_dict={x: test.images.reshape((len(test.images), input_size)),
-                                                   y_: test.labels})
+    loss_test = sess.run(cross_entropy, feed_dict={x: test_images, y_: test.labels})
+    accuracy_test = sess.run(accuracy, feed_dict={x: test_images, y_: test.labels})
     print("Result")
     print("[Test]  Loss:", loss_test, "Accuracy:", accuracy_test)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='/tmp/tensorflow/mnist/input_data',
-                      help='Directory for storing input data')
+    parser.add_argument('--data_dir', type=str, default='images', help='Directory for storing input data')
+    parser.add_argument('--cnn', action='store_true', help='Use cnn model')
+    parser.add_argument('--gpu', action='store_true', help='Use gpu')
     FLAGS, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
