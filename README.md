@@ -4,7 +4,7 @@ Tensorflowによるテンプレートです．
 
 ## 実行方法
 `python classification.py`
-以下のようにフォルダを配置してください．  
+以下のようにフォルダを配置してください．
 images
 └ target  
 └ others
