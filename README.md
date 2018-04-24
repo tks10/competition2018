@@ -1,4 +1,4 @@
-"#competition2018" 
+"#competition2018"<br>
 画像読み込みのサンプルコードです．
 
 competition_utility : データ読み込みようのパッケージ
