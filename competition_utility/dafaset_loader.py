@@ -107,8 +107,8 @@ class DatasetLoader(object):
             Raw dataset (Dataset)
 
         """
-        _res = self._data if not transpose_by_color else self._data.transpose_by_color()
-        return _res if not shuffle else _res.shuffle()
+        _res = self._data.transpose_by_color() if transpose_by_color else self._data
+        return _res.shuffle() if shuffle else _res
 
 
 class DataSet(object):
