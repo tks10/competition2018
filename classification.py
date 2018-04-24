@@ -82,7 +82,7 @@ def create_cnn_model():
 
 
 def load_dataset():
-    dirs = [os.path.join(FLAGS.data_dir, "kobayashi"), os.path.join(FLAGS.data_dir, "others")]
+    dirs = [os.path.join(FLAGS.data_dir, "target"), os.path.join(FLAGS.data_dir, "others")]
     labels = [dl.DataSet.TARGET, dl.DataSet.OTHERS]
     loader = dl.DatasetLoader(dirs, labels)
     return loader.load_train_test()

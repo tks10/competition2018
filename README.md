@@ -1,6 +1,19 @@
-"#competition2018"<br>
-画像読み込みのサンプルコードです．<br>
-<br>
-competition_utility : データ読み込みようのパッケージ<br>
-example.py : 上記パッケージの使用サンプルコード<br>
-classification_fnn : 3層NNによるサンプルコード<br>
+# competition2018 Tensorflow
+Tensorflowによるテンプレートです．
+全結合3層(Fully connected), CNNを実装しています．
+
+## 実行方法
+`python classification.py
+以下のようにフォルダを配置してください．
+images
+└ target  
+└ others
+
+## オプション
+### `--cnn
+指定すると，cnnモデルを使用します．
+### `--gpu
+指定すると，gpuを使用します．
+
+### 実行例
+`python classification.py --cnn --gpu
