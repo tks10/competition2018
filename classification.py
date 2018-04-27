@@ -12,7 +12,7 @@ import tensorflow as tf
 from competition_utility import dafaset_loader as dl
 
 FLAGS = None
-DIR_TARGET = "kobayashi"
+DIR_TARGET = "target"
 DIR_OTHERS = "others"
 
 
@@ -50,7 +50,8 @@ def create_model_using_layers():
 
 
 def create_cnn_model():
-    # Convolutional Layer #1
+    # Create a convolutional neural network
+    # CNNモデルを生成します
     x = tf.placeholder(tf.float32, [None, 64, 64, 3])
     conv1 = tf.layers.conv2d(
         inputs=x,
@@ -58,11 +59,8 @@ def create_cnn_model():
         kernel_size=[5, 5],
         padding="same",
         activation=tf.nn.relu)
-
-    # Pooling Layer #1
     pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
 
-    # Convolutional Layer #2 and Pooling Layer #2
     conv2 = tf.layers.conv2d(
         inputs=pool1,
         filters=64,
@@ -71,18 +69,16 @@ def create_cnn_model():
         activation=tf.nn.relu)
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
 
-    # Dense Layer
     pool2_flat = tf.reshape(pool2, [-1, 16 * 16 * 64])
     dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
 
-    # Logits Layer
     y = tf.layers.dense(inputs=dense, units=2)
 
     return x, y
 
 
 def load_dataset():
-    dirs = [os.path.join(FLAGS.data_dir, "target"), os.path.join(FLAGS.data_dir, "others")]
+    dirs = [os.path.join(FLAGS.data_dir, DIR_TARGET), os.path.join(FLAGS.data_dir, DIR_OTHERS)]
     labels = [dl.DataSet.TARGET, dl.DataSet.OTHERS]
     loader = dl.DatasetLoader(dirs, labels)
     return loader.load_train_test()
