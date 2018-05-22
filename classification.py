@@ -9,7 +9,7 @@ import sys
 import os
 import tensorflow as tf
 
-from competition_utility import dafaset_loader as dl
+from competition_utility import dataset_loader as dl
 
 FLAGS = None
 DIR_TARGET = "target"
@@ -53,12 +53,16 @@ def create_cnn_model():
     # Create a convolutional neural network
     # CNNモデルを生成します
     x = tf.placeholder(tf.float32, [None, 64, 64, 3])
+    reg = tf.contrib.layers.l2_regularizer(scale=0.01)
     conv1 = tf.layers.conv2d(
         inputs=x,
         filters=32,
         kernel_size=[5, 5],
         padding="same",
-        activation=tf.nn.relu)
+        activation=tf.nn.relu,
+        kernel_regularizer=reg
+        )
+
     pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
 
     conv2 = tf.layers.conv2d(

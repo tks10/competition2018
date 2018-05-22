@@ -10,7 +10,7 @@ from keras.utils import plot_model, multi_gpu_model
 
 sys.path.append('../')
 
-from competition_utility import dafaset_loader as dl
+from competition_utility import dataset_loader as dl
 
 
 LR = 0.01
